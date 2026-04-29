@@ -1,0 +1,392 @@
+{
+  "name": "Multi‑AgentEquityResearchPipeline",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1417f933-7a1f-4afc-a56a-2358f53bd62a",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aa5e1b11-9322-4a4e-aca1-6be1defde73e",
+              "name": "company",
+              "value": "nvda",
+              "type": "string"
+            },
+            {
+              "id": "65284fc4-01bf-4761-82f1-1dcf12bec6e5",
+              "name": "words",
+              "value": 1500,
+              "type": "number"
+            },
+            {
+              "id": "efa1b09f-89bf-40a6-bfa1-729bdd154ec0",
+              "name": "webhook_url_sec10k_data",
+              "value": "https://kpma-n8n0.app.n8n.cloud/webhook/a5601aa0-e240-4273-a4c5-27325aa1e25a",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        0
+      ],
+      "id": "fe9ac8c0-317d-42cc-be21-3b94b121d0f1",
+      "name": "Settings"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You work as a Senior Research Analyst at Goldman Sachs, focusing on fundamental research for tech companies. You have a team of Research Analysts that will help you with various aspects of fundamental stock research.\n\nYour task is to break down the work of this analysis report, to write:\n- The title\n- The subtitle\n- The section details\n- The introduction\n- The conclusions\n- An image prompt for a SEO-friendly article about the company {{ $json.company }}\n\nThis analysis report will be a comprehensive analysis of {{ $json.company }} using the latest SEC 10-K filing.  \nYou must not miss any of the following 7 key sections. Each section is mandatory and must be included in the output:  \n- Business Overview  \n- Company Strategy  \n- SWOT (Strength, Weakness, Opportunities, Threats)  \n- Top 3 Risk Factors  \n- Management's Discussion and Analysis (MD&A)  \n- Near-term Catalysts for Growth  \n- Future Outlook  \n\nDetailed Instructions:\n- The analysis should be unbiased and factual\n- Place the article title in a JSON field called `title`\n- Place the subtitle in a JSON field called `subtitle`\n- Place the introduction in a JSON field called `introduction`\n- In the introduction, introduce the topic that is then explored in depth in the rest of the text\n- The introduction should be around 60 words\n- Place the conclusions in a JSON field called `conclusions`\n- The conclusions should be around 60 words\n- Use the conclusions to summarize all said in the article and offer a conclusion to the reader\n- The image prompt will be used to produce a photographic cover image for the article and should depict the topics discussed in the article\n- Place the image prompt in a JSON field called `imagePrompt`\n- For each section provide a title and an exhaustive prompt that your teammates of Research Analysts can follow that will be used to write the section text\n- Place the sections in an array field called `sections`\n- For each section provide the fields `title` and `prompt`\n- The sections should follow a logical flow and not repeat the same concepts\n- The sections should relate to one another and not be isolated blocks of text; the text should be fluent and follow a linear logic\n- Don't start the section with \"section 1\", \"section 2\", \"section 3\"... just write the title of the section\n- For the title and the section titles don't use colons (`:`)\n- For the text, use markdown language for formatting\n- Go deep in the topic you treat, don't just throw some superficial info"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        368,
+        0
+      ],
+      "id": "ed4899a7-1446-4bbb-90ec-d30073b0f10b",
+      "name": "Senior Research Analyst",
+      "credentials": {
+        "openAiApi": {
+          "id": "uh0r5EaxwjZDeajy",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output[0].content[0].text.sections",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        720,
+        0
+      ],
+      "id": "8ffbea5a-719b-45f9-b801-9c2ced839a19",
+      "name": "Delegate Work"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-nano",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-NANO"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are a Research Analyst in the finance industry working with a Senior Research Analyst to produce an insight report.\n\nYour task is to write a section of the report analyzing {{ $('Settings').item.json.company }}. Here is the context of the report that the Senior Research Analyst created:\n- Overall report title: {{ $('Senior Research Analyst').item.json.output[0].content[0].text.title }}\n- Overall report subtitle: {{ $('Senior Research Analyst').item.json.output[0].content[0].text.subtitle }}\n\nUse the prompt created by the Senior Research Analyst and write a section titled {{ $json.title }} using this prompt as starting point: {{ $json.prompt }}.\n\nGuidelines:\n- All information is sourced from {{ $('Settings').item.json.company }} latest SEC 10-K filing and that the analysis is unbiased and factual\n- Return only plain text for each section (no JSON structure)\n- Use markdown for formatting\n- Do not add internal titles or headings\n- The length of each section should be approximately {{ Math.round(($('Settings').item.json.words - 120)/ $('Settings').item.json.sections) }} words\n- Go deep in the topic you treat, avoid just throwing some superficial info\n{{ $itemIndex > 0 ? \"- The previous section talks about \" + $input.all()[$itemIndex-1].json.title : \"\" }}\n{{ $itemIndex > 0 ? \"- The prompt for the previous section is \" + $input.all()[$itemIndex-1].json.prompt : \"\" }}\n{{ $itemIndex < $input.all().length - 1 ? \"- The following section will talk about \" + $input.all()[$itemIndex+1].json.title : \"\" }}\n{{ $itemIndex < $input.all().length - 1 ? \"- The prompt for the following section is \" + $input.all()[$itemIndex+1].json.prompt : \"\" }}\n- Ensure coherence of the text with the preceding and following sections\n- This section should not repeat the concepts already exposed in the previous sections\n- This section is a part of a larger report so that it be merged with the rest of the report; do not include an introduction or any conclusions\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        944,
+        0
+      ],
+      "id": "66ec8d91-b088-4ac9-a51a-ed2c44cc64ab",
+      "name": "Research Analysts",
+      "credentials": {
+        "openAiApi": {
+          "id": "uh0r5EaxwjZDeajy",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1280,
+        0
+      ],
+      "id": "ed347e96-20f5-406f-8b9a-2543079d7c47",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-nano",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-NANO"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are a detail-oriented Senior Editor known for producing clear, polished, and investor-ready research reports.\n\nYour task is to paraphrase and refine the draft report produced by the Research team.\nThis report is targeted at the investor community, so ensure the writing is professional, coherent, and stylistically consistent.\n\nGuidelines:\n- Do not remove or omit any important information from the draft\n- Do not add new analysis, new facts, or new interpretations\n- Maintain the original structure and section order\n- Preserve the full level of detail; do not shorten the content\n- Improve clarity, flow, readability, and professional tone\n- Ensure the final output reads like a polished, publication-ready research report\n\nHere is the draft report:\n{{ $json.article }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.2,
+      "position": [
+        1696,
+        0
+      ],
+      "id": "59a5f658-26f2-4a7e-bcb9-fcdfa8c03f8c",
+      "name": "Senior Editor",
+      "credentials": {
+        "openAiApi": {
+          "id": "uh0r5EaxwjZDeajy",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "=Use this tool to answer fundamental questions about {{ $('Settings').item.json.company }} from SEC 10-K. The input to this tool should be the question to be asked about {{ $('Settings').item.json.company }}. For example, what does {{ $('Settings').item.json.company }} do to earn money?",
+        "jsCode": "options = {\n    url: $('Settings').item.json.webhook_url_sec10k_data,\n    method: 'POST',\n    body: {\"input\": query, \"company\": $('Settings').item.json.company}\n}\n      \ntry {\n  const response = await this.helpers.httpRequest(options);\n  console.log(response)\n  return response\n  } catch (error) {\n    return \"error\";\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        1088,
+        224
+      ],
+      "id": "cc55b939-678b-4320-94c3-7c3e7e7d050f",
+      "name": "Code Tool"
+    },
+    {
+      "parameters": {
+        "jsCode": "let article = \"\";\n\n// Introduction\narticle += $(\"Senior Research Analyst\").first().json.output[0].content[0].text\n  .introduction;\narticle += \"\\n\\n\";\n\nfor (const item of $input.all()) {\n  article += \"**\" + item.json.title + \"**\";\n  article += \"\\n\";\n  article += item.json.output[0].content[0].text;\n  article += \"\\n\\n\";\n}\n\n// Conclusions\narticle += \"**Conclusions**\";\narticle += \"\\n\\n\";\narticle += $(\"Senior Research Analyst\").first().json.output[0].content[0].text\n  .conclusions;\n\nreturn [\n  {\n    json: {\n      article: article,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        0
+      ],
+      "id": "ab064cd4-c690-4535-9196-60540a19d159",
+      "name": "Draft Report"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "output[0].content[0].text",
+        "binaryPropertyName": "report",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2048,
+        0
+      ],
+      "id": "74b26f23-a418-457d-9b8a-95b3eb3e4a6d",
+      "name": "Export Report"
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "report",
+        "name": "nvidia-report.md",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultName": "/ (Root folder)"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2256,
+        0
+      ],
+      "id": "74784f36-af4c-40ef-b537-70e3af225f57",
+      "name": "Upload File",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "psL2LYXh4u9tNZeS",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Senior Research Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Senior Research Analyst": {
+      "main": [
+        [
+          {
+            "node": "Delegate Work",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delegate Work": {
+      "main": [
+        [
+          {
+            "node": "Research Analysts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Research Analysts": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Draft Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Senior Editor": {
+      "main": [
+        [
+          {
+            "node": "Export Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Research Analysts",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Report": {
+      "main": [
+        [
+          {
+            "node": "Senior Editor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export Report": {
+      "main": [
+        [
+          {
+            "node": "Upload File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6f2e65aa-cfca-4660-a17c-a535c7ea303b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "82d2f9fef2f23853177d6393df98c4ce16cdbd7264b955906d2141a9c7859131"
+  },
+  "id": "swtWFHah29WPiYfj",
+  "tags": []
+}

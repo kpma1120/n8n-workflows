@@ -1,0 +1,1 @@
+Use this tool to answer fundamental questions about {{ $('Settings').item.json.company }} from SEC 10-K. The input to this tool should be the question to be asked about {{ $('Settings').item.json.company }}. For example, what does {{ $('Settings').item.json.company }} do to earn money?
